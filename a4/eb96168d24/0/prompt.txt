@@ -1,0 +1,107 @@
+Implement the following plan:
+
+# Fix: Agent mid-turn commits produce no checkpoints
+
+## Context
+
+When an AI agent (Claude Code) commits during its turn — before the `Stop` hook fires `SaveChanges()` — no checkpoint is ever created. This is because:
+
+1. `SaveChanges()` runs on Stop hook, which happens AFTER the agent commits
+2. By the time `SaveChanges()` runs, the working tree is clean (agent already committed everything)
+3. When `PostCommit` fires mid-turn, it checks `StepCount > 0 || FilesTouched > 0` — both are 0 because `SaveChanges()` never ran
+4. The fallback `sessionHasNewContentInCommittedFiles()` tries to parse the live transcript and match files, but has 8 silent `return false` paths that can fail
+
+This is issue [#274](https://github.com/entireio/cli/issues/274). The condensation infrastructure for this case already exists (`extractSessionDataFromLiveTranscript`) but is gated off by the content detection check.
+
+## Change
+
+**File: `cmd/entire/cli/strategy/manual_commit_hooks.go` ~line 543-555**
+
+Current code:
+```go
+if state.Phase.IsActive() {
+    if state.StepCount > 0 || len(state.FilesTouched) > 0 {
+        hasNew = true
+    } else {
+        hasNew = s.sessionHasNewContentInCommittedFiles(state, committedFileSet)
+    }
+}
+```
+
+Change to:
+```go
+if state.Phase.IsActive() {
+    if state.StepCount > 0 || len(state.FilesTouched) > 0 {
+        hasNew = true
+    } else if state.TranscriptPath != "" {
+        // Agent committed mid-turn before SaveChanges ran.
+        // PrepareCommitMsg already validated this commit is session-related
+        // (added trailer via addTrailerForAgentCommit fast path).
+        // Trust it — the condensation code handles "no shadow branch"
+        // by reading the live transcript directly.
+        hasNew = true
+    } else {
+        hasNew = s.sessionHasNewContentInCommittedFiles(state, committedFileSet)
+    }
+}
+```
+
+This is safe because:
+- `TranscriptPath != ""` means the session was properly initialized via `UserPromptSubmit` (set at `manual_commit_session.go:240` and updated at `manual_commit_hooks.go:1359`)
+- The condensation fallback (`extractSessionDataFromLiveTranscript` at `manual_commit_condensation.go:133-143`) already handles the "no shadow branch" case
+- The `prepare-commit-msg` hook already validated this is a session-related commit and added the trailer
+
+## Tests
+
+**File: `cmd/entire/cli/integration_test/mid_session_commit_test.go`**
+
+Add a new test: `TestAgentCommitMidTurn_CondensingWithoutSaveChanges`
+
+This test verifies the full flow:
+1. Start session (ACTIVE phase) with transcript path
+2. Agent creates files and writes transcript (NO SaveChanges/Stop called)
+3. Agent commits mid-turn (no shadow branch exists)
+4. Verify: checkpoint trailer added to commit
+5. Verify: condensation happened — checkpoint exists on `entire/checkpoints/v1`
+6. Verify: session stays ACTIVE
+7. Agent stops → verify session transitions to IDLE cleanly
+
+Pattern follows existing `TestShadowStrategy_MidSessionCommit_FromTranscript` but adds the critical assertion that condensation actually happened (step 5), which the existing test doesn't check.
+
+Add a second test: `TestAgentCommitMidTurn_NoCondensationWithoutTranscript`
+
+This test verifies the safety guard:
+1. Start session WITHOUT transcript path (legacy/edge case)
+2. Agent commits mid-turn
+3. Verify: no condensation happens (TranscriptPath is empty, so `hasNew` stays false)
+
+This ensures we don't blindly condense sessions that have no transcript data.
+
+## Verification
+
+```bash
+mise run fmt && mise run lint && mise run test:ci
+```
+
+Key checks:
+- New tests pass
+- Existing `TestShadowStrategy_MidSessionCommit_*` tests still pass
+- Existing `TestShadow_CommitBeforeStop` still passes
+- `TestShadowStrategy_AgentCommit_AlwaysGetsTrailer` still passes
+
+
+If you need specific details from before exiting plan mode (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/justinwei/.REDACTED.jsonl
+
+---
+
+<task-notification>
+<task-id>be40652</task-id>
+<output-file>REDACTED.output</output-file>
+<status>completed</status>
+<summary>Background command "Find mise binary location" completed (exit code 0)</summary>
+</task-notification>
+Read the output file to retrieve the result: REDACTED.output
+
+---
+
+awesome go upt up a draft pr and link that issue

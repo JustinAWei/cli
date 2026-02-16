@@ -1,0 +1,27 @@
+{
+  "cli_version": "dev",
+  "checkpoint_id": "a4eb96168d24",
+  "strategy": "manual-commit",
+  "branch": "fix/agent-mid-turn-commit-condensation",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "cmd/entire/cli/integration_test/mid_session_commit_test.go",
+    "cmd/entire/cli/strategy/manual_commit_hooks.go"
+  ],
+  "sessions": [
+    {
+      "metadata": "/a4/eb96168d24/0/metadata.json",
+      "transcript": "/a4/eb96168d24/0/full.jsonl",
+      "context": "/a4/eb96168d24/0/context.md",
+      "content_hash": "/a4/eb96168d24/0/content_hash.txt",
+      "prompt": "/a4/eb96168d24/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 50,
+    "cache_creation_tokens": 49290,
+    "cache_read_tokens": 2097720,
+    "output_tokens": 1209,
+    "api_call_count": 44
+  }
+}

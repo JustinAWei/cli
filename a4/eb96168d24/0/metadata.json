@@ -1,0 +1,32 @@
+{
+  "cli_version": "dev",
+  "checkpoint_id": "a4eb96168d24",
+  "session_id": "b4c3afe3-9897-4e07-a8f3-d7f7adbd92b8",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-16T04:22:52.50558Z",
+  "branch": "fix/agent-mid-turn-commit-condensation",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "cmd/entire/cli/integration_test/mid_session_commit_test.go",
+    "cmd/entire/cli/strategy/manual_commit_hooks.go"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "a50c0d8b81c7",
+  "token_usage": {
+    "input_tokens": 50,
+    "cache_creation_tokens": 49290,
+    "cache_read_tokens": 2097720,
+    "output_tokens": 1209,
+    "api_call_count": 44
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-16T04:22:52.402458Z",
+    "agent_lines": 187,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 187,
+    "agent_percentage": 100
+  },
+  "transcript_path": ".claude/projects/-Users-justinwei-Desktop-coding-projects-cli/b4c3afe3-9897-4e07-a8f3-d7f7adbd92b8.jsonl"
+}
